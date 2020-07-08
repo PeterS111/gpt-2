@@ -46,6 +46,8 @@ parser.add_argument('--sample_every', metavar='N', type=int, default=100, help='
 parser.add_argument('--sample_length', metavar='TOKENS', type=int, default=1023, help='Sample this many tokens')
 parser.add_argument('--sample_num', metavar='N', type=int, default=1, help='Generate this many samples')
 parser.add_argument('--save_every', metavar='N', type=int, default=1000, help='Write a checkpoint every N steps')
+parser.add_argument('--max_to_keep', metavar='N', type=int, default=1000, help='Max checkpoints to keep')
+parser.add_argument('--max_steps', metavar='N', type=int, default=10000, help='Max steps of training')
 
 parser.add_argument('--val_dataset', metavar='PATH', type=str, default=None, help='Dataset for validation loss, defaults to --dataset.')
 parser.add_argument('--val_batch_size', metavar='SIZE', type=int, default=2, help='Batch size for validation.')
@@ -151,7 +153,7 @@ def main():
 
         saver = tf.train.Saver(
             var_list=all_vars,
-            max_to_keep=5,
+            max_to_keep=args.max_to_keep,
             keep_checkpoint_every_n_hours=2)
         sess.run(tf.global_variables_initializer())
 
@@ -242,10 +244,27 @@ def main():
             summary_log.flush()
             print(
                 '[{counter} | {time:2.2f}] validation loss = {loss:2.2f}'
-                .format(
-                    counter=counter,
-                    time=time.time() - start_time,
-                    loss=v_val_loss))
+                .format(counter=counter, time=time.time() - start_time, loss=v_val_loss))
+                    
+            #########################################################
+            ##-----------------------------------------------------##        
+            
+            write_str = (
+                'step: {counter} validation_loss: {loss:2.2f}'
+                .format(counter=counter, loss=v_val_loss))
+                    
+            print(write_str)
+
+            f = open("logs_eval.txt", "a", encoding="utf-8")
+            f.write(write_str + "\n")
+            f.close()
+            
+            ##-----------------------------------------------------##
+            #########################################################        
+                    
+                    
+                    
+            
 
         def sample_batch():
             return [data_sampler.sample(1024) for _ in range(args.batch_size)]
@@ -278,14 +297,38 @@ def main():
 
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
+                            
 
-                print(
-                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
+                # w_str_1 = "log 1: avg_loss[0] :  {avgl_0:2.2f}, avg_loss[1]: {avgl_1:2.2f}, v_loss: {vl:2.2f}, avg: {avgl:2.2f}".format(avgl_0=avg_loss[0],avgl_1=avg_loss[1],vl=v_loss, avgl=avg_loss[0] / avg_loss[1])
+
+                # print(
+                    # '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
+                    # .format(
+                        # counter=counter,
+                        # time=time.time() - start_time,
+                        # loss=v_loss,
+                        # avg=avg_loss[0] / avg_loss[1]))
+                        
+                #########################################################
+                ##-----------------------------------------------------##        
+                
+                write_str = (
+                    'step: {counter} time: {time:2.2f} loss: {loss:2.2f} avg: {avg:2.2f}'
                     .format(
                         counter=counter,
                         time=time.time() - start_time,
                         loss=v_loss,
                         avg=avg_loss[0] / avg_loss[1]))
+                        
+                print(write_str)
+
+                f = open("logs.txt", "a", encoding="utf-8")
+                f.write(write_str + "\n")
+                f.close()
+                
+                ##-----------------------------------------------------##
+                #########################################################
+                
 
                 counter += 1
         except KeyboardInterrupt:
